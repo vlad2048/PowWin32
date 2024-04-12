@@ -1,0 +1,20 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\FastForms\FastForms.csproj" />
+    <ProjectReference Include="..\LibsBase\PowRxVar\PowRxVar.csproj" />
+    <ProjectReference Include="..\LibsBase\PowWin32.Geom\PowWin32.Geom.csproj" />
+    <ProjectReference Include="..\PowWin32\PowWin32.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="LINQPad.Runtime">
+      <HintPath>D:\utils\dev\LINQPad8\LINQPad.Runtime.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+</Project>

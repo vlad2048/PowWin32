@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "PlayFast": {
+      "commandName": "Project",
+      "nativeDebugging": true
+    }
+  }
+}

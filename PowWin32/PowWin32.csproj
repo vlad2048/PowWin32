@@ -1,0 +1,19 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AllowUnsafeBlocks>True</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Vanara.PInvoke.DwmApi" Version="3.4.17" />
+    <PackageReference Include="Vanara.PInvoke.User32" Version="3.4.17" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LibsBase\PowRxVar\PowRxVar.csproj" />
+    <ProjectReference Include="..\LibsBase\PowWin32.Geom\PowWin32.Geom.csproj" />
+  </ItemGroup>
+
+</Project>
