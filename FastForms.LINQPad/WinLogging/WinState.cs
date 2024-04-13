@@ -127,7 +127,7 @@ sealed class WinState
     private void Update_Geom()
     {
 	    GeomNfo.V = new WinGeomNfo(
-			Id.Hwnd.GetClientR2Screen(),
+			Id.Hwnd.GetWinR(),
 			Id.Hwnd.GetClientR()
 	    );
     }

@@ -95,6 +95,8 @@ public static class WinLogger
 		dispatcher.WhenEvt.Subscribe(evt =>
 		{
 			var hwnd = evt.Hwnd;
+			if (hwnd == 0) return;
+
 			if (!DoesHwndPassWinFilter(hwnd))
 				return;
 			var needUpdate = false;

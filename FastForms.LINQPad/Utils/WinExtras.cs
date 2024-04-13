@@ -24,6 +24,21 @@ static class WinExtras
 		return sb.ToString();
 	}
 
+
+	/*public static R? GetWinROpt(this HWND hwnd) => GetWindowRect(hwnd, out var r) switch
+	{
+		false => null,
+		true => r
+	};
+	public static R? GetClientROpt(this HWND hwnd) => GetClientRect(hwnd, out var r) switch
+	{
+		false => null,
+		true => r
+	};*/
+
+
+
+
 	public static R GetClientR2Screen(this HWND hwnd) => Client2Screen(hwnd, GetClientR(hwnd));
 
 	public static Pt Screen2Client(this HWND hwnd, Pt e)

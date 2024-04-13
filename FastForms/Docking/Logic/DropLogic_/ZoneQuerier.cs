@@ -2,6 +2,7 @@
 using FastForms.Docking.Logic.DropLogic_.Structs;
 using FastForms.Docking.Logic.Layout_.Enums;
 using FastForms.Docking.Logic.Layout_.Nodes;
+using FastForms.Docking.Structs;
 using PowWin32.Geom;
 using PowWin32.Windows.Utils;
 
@@ -10,40 +11,33 @@ namespace FastForms.Docking.Logic.DropLogic_;
 
 static class ZoneQuerier
 {
-	public static Zone[] QueryZones(this Docker docker, TreeType treeTypeSrc) =>
-		Query(
-			docker,
-			docker.Root,
-			docker.TreeType.V,
-			treeTypeSrc
-		)
-		.ToScreen();
+	public static Zone[] QueryZones(this Docker dockerDst, Docker dockerSrc) =>
+		Query(dockerDst, dockerSrc)
+			.ToScreen();
 
 
 	private static Zone[] Query(
-		Docker docker,
-		TNod<INode> root,
-		TreeType treeTypeDst,
-		TreeType treeTypeSrc
-	) =>
-		treeTypeSrc switch
+		Docker dockerDst,
+		Docker dockerSrc
+	)
+	{
+		if (dockerSrc.Root.Count(e => e.V is HolderNode) == 0)
+			return [];
+
+		return dockerSrc.TreeType.V switch
 		{
 			TreeType.Tool or TreeType.ToolSingle =>
-				[.. root.SelectMany(node => QueryForTool(docker, node, treeTypeDst, root))],
+				[.. dockerDst.Root.SelectMany(node => QueryForTool(dockerDst, node))],
 
 			TreeType.Doc =>
-				[.. root.SelectMany(node => QueryForDoc(docker, node, treeTypeDst))],
+				[.. dockerDst.Root.SelectMany(node => QueryForDoc(dockerDst, node))],
 
 			TreeType.Mixed =>
 				[],
 
 			_ => throw new ArgumentException()
 		};
-
-
-
-
-
+	}
 
 
 	// ***************
@@ -51,27 +45,26 @@ static class ZoneQuerier
 	// ** For Tools **
 	// ***************
 	// ***************
-	private static Zone[] QueryForTool(Docker docker, TNod<INode> node, TreeType treeType, TNod<INode> root) =>
+	private static Zone[] QueryForTool(Docker dockerDst, TNod<INode> node) =>
 		node.V switch
 		{
-			ToolRootNode when treeType is TreeType.Tool && node.Kids.Count == 0 =>
-				[],
-				//[MakeToolRootInitZone(docker, node.V.R)],
+			ToolRootNode when dockerDst.TreeType.V is TreeType.Tool && node.Kids.Count == 0 =>
+				[MakeToolRootInitZone(dockerDst, node.V.R)],
 
-			ToolRootNode when treeType is TreeType.Doc or TreeType.Mixed =>
+			ToolRootNode when dockerDst.TreeType.V is TreeType.Doc or TreeType.Mixed =>
 				[],
-				//MakeToolRootZones(docker, node.V.R),
+				//MakeToolRootZones(dockerDst, node.V.R),
 
 			ToolHolderNode holder =>
-				[MakeToolHolderZone(docker, holder)],
+				[MakeToolHolderZone(dockerDst, holder)],
 
 			DocRootNode when node.Kids.Count == 0 =>
 				[],
-				//[MakeToolDocRootInitZone(docker, node.V.R)],
+				//[MakeToolDocRootInitZone(dockerDst, node.V.R)],
 
 			DocHolderNode holder =>
 				[],
-				//[MakeToolInDocHolderZone(docker, holder, root)],
+				//[MakeToolInDocHolderZone(dockerDst, holder, rootDst)],
 
 			_ => [],
 		};
@@ -165,18 +158,18 @@ static class ZoneQuerier
 
 	// ToolDocRootInit Zone
 	// ====================
-	private static Zone MakeToolDocRootInitZone(Docker docker, R zoneR)
+	private static Zone MakeToolDocRootInitZone(Docker dockerDst, R zoneR)
 	{
 		var bmpR = ZoneBig.MakeBmpR(zoneR);
 		return new Zone(
-			docker,
+			dockerDst,
 			"DocRootInit",
 			zoneR,
 			bmpR,
 			ZoneBmp.Big,
 			[
 				new Drop(
-					docker,
+					dockerDst,
 					"DocRootInit.Init",
 					ZoneBig.MakeCenterR(bmpR),
 					new MergeDropBmp(),
@@ -185,7 +178,7 @@ static class ZoneQuerier
 				),
 				..Enum.GetValues<SDir>()
 					.Select(dir => new Drop(
-						docker,
+						dockerDst,
 						$"DocRootInit.SplitRoot({dir})",
 						ZoneBig.MakeFarSideR(bmpR, dir),
 						new ToolSplitDropBmp(dir),
@@ -200,9 +193,9 @@ static class ZoneQuerier
 
 	// ToolInDocHolder Zone
 	// ====================
-	private static Zone MakeToolInDocHolderZone(Docker docker, DocHolderNode holder, TNod<INode> root)
+	private static Zone MakeToolInDocHolderZone(Docker dockerDst, DocHolderNode holder)
 	{
-		var docRoot = root.First(e => e.V is DocRootNode);
+		var docRoot = dockerDst.Root.First(e => e.V is DocRootNode);
 		var splits = docRoot.FindSplitDirs(holder);
 		SDir[] none = [];
 		SDir[] dirs =
@@ -215,14 +208,14 @@ static class ZoneQuerier
 		var zoneR = holder.R;
 		var bmpR = ZoneBig.MakeBmpR(zoneR);
 		return new Zone(
-			docker,
+			dockerDst,
 			$"ToolInDoc({zoneR})",
 			zoneR,
 			bmpR,
 			ZoneBmp.Big,
 			[
 				new Drop(
-					docker,
+					dockerDst,
 					$"ToolInDoc({zoneR}).Merge",
 					ZoneBig.MakeCenterR(bmpR),
 					new MergeDropBmp(),
@@ -231,7 +224,7 @@ static class ZoneQuerier
 				),
 				..Enum.GetValues<SDir>()
 					.Select(dir => new Drop(
-						docker,
+						dockerDst,
 						$"ToolInDoc({zoneR}).Split({dir})",
 						ZoneBig.MakeSideR(bmpR, dir),
 						new DocSplitDropBmp(dir),
@@ -239,7 +232,7 @@ static class ZoneQuerier
 						new SplitTarget(holder, dir)
 					)),
 				..dirs.Select(dir => new Drop(
-					docker,
+					dockerDst,
 					$"ToolInDoc({zoneR}).SplitRoot({dir})",
 					ZoneBig.MakeFarSideR(bmpR, dir),
 					new DocSplitDropBmp(dir),
@@ -260,7 +253,7 @@ static class ZoneQuerier
 	// ** For Docs **
 	// **************
 	// **************
-	private static Zone[] QueryForDoc(Docker docker, TNod<INode> node, TreeType treeType) =>
+	private static Zone[] QueryForDoc(Docker dockerDst, TNod<INode> node) =>
 		node.V switch
 		{
 			_ => []

@@ -30,7 +30,7 @@ static class LayoutCalculator
 			{
 				case RootNode:
 				{
-					Ass(node.Kids.Count <= 1, "RootNode has the wrong number of kids");
+					AssMsg(node.Kids.Count <= 1, "RootNode has the wrong number of kids");
 					if (node.Kids.Count == 1)
 					{
 						var isRootHolder = node.V.Type == NodeType.Tool && node.Kids[0].V is HolderNode;
@@ -42,7 +42,7 @@ static class LayoutCalculator
 				}
 				case SplitNode e:
 				{
-					Ass(node.Kids.Count == 2, "SplitNode has the wrong number of kids");
+					AssMsg(node.Kids.Count == 2, "SplitNode has the wrong number of kids");
 
 					var splitPosResize = isInit switch
 					{

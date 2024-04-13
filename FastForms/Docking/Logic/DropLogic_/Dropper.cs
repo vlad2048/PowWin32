@@ -3,6 +3,7 @@ using DynamicData;
 using FastForms.Docking.Logic.DropLogic_.Structs;
 using FastForms.Docking.Logic.DropLogic_.Wins;
 using FastForms.Docking.Logic.Layout_.Nodes;
+using FastForms.Docking.Logic.Tree_;
 using FastForms.Utils.Win32;
 using PowMaybe;
 using PowRxVar;
@@ -50,16 +51,19 @@ static class Dropper
 			{
 				L($"DROP => {drop_}");
 				var (dockerDst, target) = (drop_.Docker, drop_.Target);
-				Pane[] panes =
-				[
-					..
-					from node in dockerSrc.Root
-					where node.V is HolderNode
-					let holder = (HolderNode)node.V
-					from pane in holder.State.GetAndRemovePanes()
-					select pane
-				];
-				dockerDst.ExecDrop(target, panes);
+
+				var root = dockerSrc.Root;
+				var toolHolderCount = root.Count(e => e.V is ToolHolderNode);
+				var docHolderCount = root.Count(e => e.V is DocHolderNode);
+				var nodeToDock = (toolHolderCount, docHolderCount) switch
+				{
+					(0, 0) => throw new ArgumentException("Cannot dock an empty tree"),
+					(_, 0) => root.Kids.Single(),
+					(0, _) => root.Find<DocRootNode>().Kids.Single(),
+					(_, _) => throw new ArgumentException("Cannot dock a mixed tree"),
+				};
+
+				dockerDst.DockToTarget(nodeToDock, target);
 				dockerSrc.Sys.Destroy();
 			}).D(d);
 
@@ -68,7 +72,7 @@ static class Dropper
 		// =========================
 		var zones = mouse
 			.Select2(mouse_ => GetDockerUnderMouse(mouse_, sysSrc.Handle))
-			.SelectMayArray(t => t.Item2.QueryZones(dockerSrc.TreeType.V).Where(zone => zone.ZoneR.Contains(t.Item1)).ToArray())
+			.SelectMayArray(t => t.Item2.QueryZones(dockerSrc).Where(zone => zone.ZoneR.Contains(t.Item1)).ToArray())
 			.ToCache(e => e.Id, (a, b) => a.Id == b.Id, d);
 
 

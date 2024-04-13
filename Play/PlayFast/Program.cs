@@ -38,18 +38,38 @@ static class Program
 
 
 
-	private const int OfsX = -600;
-	private static readonly R AppR = new(50 + OfsX, 70, 500, 450);
-	private static readonly R DockerR = new(20 + OfsX, 600, 250, 150);
+	private const int OfsX = -800;
+	private static readonly R AppR = new(50 + OfsX, 70, 700, 550);
+	private static readonly R DockerR = new(20 + OfsX, 650, 350, 250);
 	//private static readonly R DockerR2 = new(20 + OfsX, 800, 250, 150);
 
 	private static void RunMerge()
 	{
-		var win = new AppWin(AppR, true); win.Docker.AddPanes([PaneA(), PaneB()]);
-		var docker = Docker.MakeExtra(N.RootTool(N.Holder(NodeType.Tool, PaneE())), win.Sys, DockerR);
+		var win = new AppWin(AppR, false);
+		win.Docker.Dock([PaneA(), PaneB()]);
+		win.Docker.Dock([PaneC()], Dock.Right);
+		win.Docker.Dock([PaneD()], Dock.Down);
+		var dockerRoot = N.RootTool(N.Split(NodeType.Tool, Dir.Horz,
+			N.Holder(NodeType.Tool, PaneE()),
+			N.Holder(NodeType.Tool, PaneF())
+		));
+		var docker = Docker.MakeExtra(dockerRoot, win.Sys, DockerR);
 
 		win.Docker.Name = "Main";
 		docker.Name = "Docker_1";
+
+
+		/*
+		var win = new AppWin(AppR, false);
+		win.Docker.Dock([PaneA()]);
+
+		//var dockerRoot = N.RootTool(N.Split(NodeType.Tool, Dir.Horz, N.Holder(NodeType.Tool, PaneB()), N.Holder(NodeType.Tool, PaneC())));
+		var dockerRoot1 = N.RootTool(N.Holder(NodeType.Tool, PaneB()));
+		var docker1 = Docker.MakeExtra(dockerRoot1, win.Sys, DockerR, true);
+
+		var dockerRoot2 = N.RootTool(N.Holder(NodeType.Tool, PaneC()));
+		var docker2 = Docker.MakeExtra(dockerRoot2, win.Sys, DockerR + new Pt(0, 200));
+		*/
 
 		MsgPump.Run(win.Sys);
 	}

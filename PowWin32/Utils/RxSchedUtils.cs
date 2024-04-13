@@ -39,6 +39,6 @@ public static class RxSchedUtils
 			sched = new SynchronizationContextScheduler(ctx);
 		}
 
-		Ass(sched != null, "Wrong");
+		AssMsg(sched != null, "Wrong");
 	}
 }

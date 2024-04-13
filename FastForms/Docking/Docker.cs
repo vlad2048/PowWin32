@@ -1,5 +1,4 @@
 ﻿using FastForms.Docking.Enums;
-using FastForms.Docking.Logic.DropZones_.Structs;
 using FastForms.Docking.Logic.Layout_;
 using FastForms.Docking.Logic.Layout_.Nodes;
 using FastForms.Docking.Logic.Tree_;
@@ -10,11 +9,9 @@ using PowWin32.Windows;
 using PowWin32.Windows.ReactiveLight;
 using PowWin32.Windows.Structs;
 using PowWin32.Windows.StructsPackets;
-using System.Reactive;
 using System.Reactive.Linq;
 using System.Reactive.Subjects;
 using FastForms.Utils.Win32;
-using PowTrees.Algorithms;
 using PowWin32.Windows.Utils;
 using Vanara.PInvoke;
 using FastForms.Docking.Utils;
@@ -22,50 +19,47 @@ using FastForms.Docking.Logic.DockerWin_.Painting;
 using FastForms.Docking.Logic.DockerWin_.Structs;
 using FastForms.Docking.Logic.DropLogic_;
 using FastForms.Docking.Logic.HolderWin_.Painting;
-using FastForms.Docking.Logic.Layout_.Enums;
 using FastForms.Docking.Utils.Btns_;
 using FastForms.Utils.GdiUtils;
-using FastForms.Docking.Logic.DropLogic_.Structs;
 using FastForms.Docking.Structs;
+using PowTrees.Algorithms;
 
 
 namespace FastForms.Docking;
 
 public sealed class Docker
 {
-	private readonly SysWin mainWindow;
-
-	private readonly Subject<TreeMod> whenTreeMod;
-	private IObservable<TreeMod> WhenTreeMod => whenTreeMod.AsObservable();
-	private void TriggerTreeMod(TreeMod mod) => whenTreeMod.OnNext(mod);
-	//private void TriggerTreeMod(TreeModType type, TNod<INode> nod, params HolderNode[] holderAdds) => TriggerTreeMod(new TreeMod(type, nod, holderAdds));
-
-
+	private readonly Subject<ITreeMod> whenTreeMod;
+	private IObservable<ITreeMod> WhenTreeMod => whenTreeMod.AsObservable();
 	private bool IsMainWindow { get; }
+
+
+	internal SysWin MainWindow { get; }
+	internal void TriggerTreeMod(ITreeMod mod) => whenTreeMod.OnNext(mod);
+
 
 	public Disp D { get; }
 	public SysWin Sys { get; }
 	public IRoVar<TreeType> TreeType { get; }
-	public IRoVar<bool> IsMaximized { get; }
+	public IRoVar<bool> IsToolSingleMaximized { get; }
 	public IRwVar<HolderNode?> ActiveHolder { get; }
 	public TNod<INode> Root { get; }
 	public string Name { get; set; }
-
 	public override string ToString() => Name;
 
 
-	public static Docker MakeForMainWindow(TNod<INode> root, SysWin mainWindow) => new(root, mainWindow, null);
-	public static Docker MakeExtra(TNod<INode> root, SysWin mainWindow, R otherR) => new(root, mainWindow, otherR);
+	public static Docker MakeForMainWindow(TNod<INode> root, SysWin mainWindow, bool dbg = false) => new(root, mainWindow, null, dbg);
+	public static Docker MakeExtra(TNod<INode> root, SysWin mainWindow, R otherR, bool dbg = false) => new(root, mainWindow, otherR, dbg);
 
 
-	private Docker(TNod<INode> root, SysWin mainWindow, R? otherR)
+	private Docker(TNod<INode> root, SysWin mainWindow, R? otherR, bool dbg)
 	{
-		Ass(root.V is ToolRootNode, "The root needs to be a ToolRootNode");
+		AssMsg(root.V is ToolRootNode, "The root needs to be a ToolRootNode");
 
 		// Init
 		// ====
 		IsMainWindow = otherR == null;
-		this.mainWindow = mainWindow;
+		MainWindow = mainWindow;
 		Name = $"Docker(main:{IsMainWindow})";
 		Root = root;
 		D = IsMainWindow switch
@@ -75,7 +69,7 @@ public sealed class Docker
 		};
 		var treeType = Var.Make(Root.ComputeTreeType(IsMainWindow), D);
 		TreeType = treeType;
-		whenTreeMod = new Subject<TreeMod>().D(D);
+		whenTreeMod = new Subject<ITreeMod>().D(D);
 		ActiveHolder = Var.Make<HolderNode?>(null, D);
 
 
@@ -84,21 +78,56 @@ public sealed class Docker
 		Sys = IsMainWindow switch
 		{
 			true => mainWindow,
-			false => DockerFileUtils.MakeSysWin(D, treeType, otherR ?? throw new ArgumentException("Impossible"), mainWindow),
+			false => DockerFileUtils.MakeSysWin(D, treeType, otherR ?? throw new ArgumentException("Impossible"), mainWindow, dbg),
 		};
 		Sys.SetProp(DockingConsts.PropNames.Docker, this);
-		IsMaximized = Sys.GetIsMaximizedSpec(TreeType);
+		IsToolSingleMaximized = Sys.IsToolSingleMaximized(TreeType);
+
+
+
+		if (dbg)
+		{
+			TreeType.Log();
+			WhenTreeMod.Log();
+		}
 
 
 		// Rect to tree changes: Attach windows to parent & Layout
 		// =====================
 		WhenTreeMod.Subscribe(mod =>
 		{
-			treeType.V = Root.ComputeTreeType(IsMainWindow);
-			if (mod.NodR.HasValue) mod.Nod.V.R = mod.NodR.Value;
-			LayoutCalculator.Compute(mod.Nod, TreeType.V);
-			mod.HolderAdds.ForEach(holder => holder.State.Attach(this));
-			LayoutApplier.Apply(Root);
+			switch (mod)
+			{
+				case InitTreeMod:
+					treeType.V = Root.ComputeTreeType(IsMainWindow);
+					Root.V.R = Sys.ClientR;
+					LayoutCalculator.Compute(Root, TreeType.V);
+					Root.OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Attach(this));
+					LayoutApplier.Apply(Root);
+					break;
+
+				case PaintNodeTreeMod { Node: var node }:
+					Root.Find(node).OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Repaint());
+					break;
+
+				case AddHoldersTreeMod { Holders: var holders }:
+					treeType.V = Root.ComputeTreeType(IsMainWindow);
+					Root.V.R = Sys.ClientR;
+					LayoutCalculator.Compute(Root, TreeType.V);
+					holders.ForEach(holder => holder.State.Attach(this));
+					LayoutApplier.Apply(Root);
+					break;
+
+				case RecomputeLayoutTreeMod:
+					treeType.V = Root.ComputeTreeType(IsMainWindow);
+					LayoutCalculator.Compute(Root, TreeType.V);
+					LayoutApplier.Apply(Root);
+					break;
+
+				default:
+					throw new ArgumentException();
+			}
+
 		}).D(D);
 
 		Sys.Evt.WhenSize.ToUnit().Subscribe(_ =>
@@ -106,6 +135,12 @@ public sealed class Docker
 			Root.V.R = Sys.ClientR;
 			LayoutCalculator.Compute(Root, TreeType.V);
 			LayoutApplier.Apply(Root);
+		}).D(D);
+
+		TreeType.Subscribe(_ =>
+		{
+			if (dbg) L("TreeType -> Invalidate");
+			Sys.Invalidate();
 		}).D(D);
 
 
@@ -116,76 +151,12 @@ public sealed class Docker
 
 		// Initial Layout
 		// ==============
-		TriggerTreeMod(TreeMod.MakeInit(Root, Sys.ClientR));
+		TriggerTreeMod(new InitTreeMod());
 
 
 		// Show Window
 		// ===========
 		Sys.Show();
-	}
-
-
-
-	internal void ExecDrop(ITarget target, Pane[] panes)
-	{
-		var mod = DropExec.Exec(this, target, panes);
-		TriggerTreeMod(mod);
-	}
-
-
-
-
-	public void AddPanes(Pane[] panes, Dock? dock = null)
-	{
-		if (panes.Length == 0) return;
-		var mod = DockerFileUtils.AddPanes(this, panes, dock);
-		TriggerTreeMod(mod);
-	}
-
-
-	public (Docker, HolderNode) UndockPane(Pane pane, TabLabelLay jerkLay)
-	{
-		var holderSrc = Root.GetHolderContainingPane(pane) ?? throw new ArgumentException("Failed to find Holder");
-		Ass(holderSrc.State.Panes.Count >= 2, "Cannot undock a pane if it's the last one in the holder");
-
-		holderSrc.State.Panes.Del(pane);
-
-		var holderDst = holderSrc.Type switch
-		{
-			NodeType.Tool => HolderNode.Make(NodeType.Tool, [pane], jerkLay),
-			NodeType.Doc => HolderNode.Make(NodeType.Doc, [pane]),
-			_ => throw new ArgumentException()
-		};
-		var dockerDstRoot = holderSrc.Type switch
-		{
-			NodeType.Tool => N.RootTool(Nod.Make<INode>(holderDst)),
-			NodeType.Doc => N.RootTool(N.RootDoc(Nod.Make<INode>(holderDst))),
-			_ => throw new ArgumentException()
-		};
-
-		var winR = holderSrc.State.Sys.GetWinR() + DockerLayout.WinMargStd - HolderLayout.WinBorderMarg;
-		var dockerDst = MakeExtra(dockerDstRoot, mainWindow, winR);
-
-		return (dockerDst, holderDst);
-	}
-
-
-	public Docker UndockHolder(HolderNode holder)
-	{
-		var holderNode = Root.First(e => e.V == holder);
-		var mod = NodeRemover.Remove(Root, holderNode);
-		TriggerTreeMod(mod);
-
-
-		var winR = holder.State.Sys.GetWinR() + DockerLayout.WinMargStd - HolderLayout.WinBorderMarg;
-		var dockerRoot = holder.Type switch
-		{
-			NodeType.Tool => N.RootTool(holderNode),
-			NodeType.Doc => N.RootTool(N.RootDoc(holderNode)),
-			_ => throw new ArgumentException()
-		};
-		var dockerDst = MakeExtra(dockerRoot, mainWindow, winR);
-		return dockerDst;
 	}
 }
 
@@ -212,7 +183,7 @@ file static class DockerFileUtils
 
 
 
-	public static SysWin MakeSysWin(Disp d, IRoVar<TreeType> treeType, R otherR, SysWin? mainWindow)
+	public static SysWin MakeSysWin(Disp d, IRoVar<TreeType> treeType, R otherR, SysWin? mainWindow, bool dbg)
 	{
 		var sys = new SysWin(d, clientR => DockerLayout.AdjustClientR(clientR, treeType.V is TreeType.ToolSingle));
 
@@ -227,6 +198,7 @@ file static class DockerFileUtils
 
 		sys.Evt.WhenPaint.Subs((ref PaintPacket e) =>
 		{
+			if (dbg) L($"Paint: {treeType.V}");
 			if (treeType.V is TreeType.ToolSingle) return;
 			using var _ = e.Paint(out var gfx);
 			DockerWinPainter.Paint(
@@ -245,51 +217,12 @@ file static class DockerFileUtils
 
 
 
-
-
-
-	public static TreeMod AddPanes(Docker docker, Pane[] panes, Dock? dock)
-	{
-		Ass(panes.Length > 0, "Invalid");
-		Ass(panes.All(e => e.Type == panes[0].Type), "Invalid Panes");
-		var paneType = panes[0].Type;
-
-		var dockNod = dock != null ? new DockNod(dock.SDir, docker.Root.GetHolderContainingPane(dock.Pane)) : DockNod.Empty;
-
-		var drop = dockNod.Interpret(paneType, docker.Root);
-
-
-		switch (drop)
-		{
-			case IAddDrop { Holder: var addHolder }:
-			{
-				var holder = addHolder;
-				Ass(holder.Type == paneType, "Wrong node types");
-				holder.State.AddPanes(panes);
-				return TreeMod.Make(docker.Root.Find(addHolder));
-			}
-
-			case INewDrop newDrop:
-			{
-				var holder = HolderNode.Make(paneType, panes);
-				newDrop.Exec(holder, docker.Root);
-				//holder.State.Attach(docker);
-				return new TreeMod(TreeModType.Layout, docker.Root, null, [holder]);
-			}
-
-			default:
-				throw new ArgumentException();
-		}
-	}
-
-
-
-	public static IRoVar<bool> GetIsMaximizedSpec(this SysWin sys, IRoVar<TreeType> treeType)
+	public static IRoVar<bool> IsToolSingleMaximized(this SysWin sys, IRoVar<TreeType> treeType)
 	{
 		var sysIsMax = sys.GetIsMaximized();
 		return Var.Make(
 			sysIsMax.V && treeType.V is TreeType.ToolSingle,
-			sysIsMax.Select(isMax => isMax && treeType.V is TreeType.ToolSingle),
+			Var.Merge(sysIsMax, treeType).Select(_ => sysIsMax.V && treeType.V is TreeType.ToolSingle),
 			sys.D
 		);
 	}

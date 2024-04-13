@@ -10,6 +10,9 @@ public static class Screenshot
 {
 	public static Bitmap Take(HWND hwnd)
 	{
+		//var rOpt = hwnd.GetWinROpt();
+		//if (!rOpt.HasValue) throw new ArgumentException("Failed to get WinR");
+		//var r = rOpt.Value;
 		var r = hwnd.GetWinR();
 		var bmp = new Bitmap(r.Width, r.Height, PixelFormat.Format32bppArgb);
 		var gfxBmp = Graphics.FromImage(bmp);

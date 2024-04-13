@@ -6,9 +6,24 @@ namespace FastForms.Docking.Enums;
 
 public enum TreeType
 {
+	/// <summary>
+	/// Not the main window AND the root has a single ToolHolderNode
+	/// </summary>
 	ToolSingle,
+
+	/// <summary>
+	/// There is no DocRoot. Includes the case of an empty root
+	/// </summary>
 	Tool,
+
+	/// <summary>
+	/// There is a DocRoot and no ToolHolderNodes
+	/// </summary>
 	Doc,
+
+	/// <summary>
+	/// There is both a DocRoot and at least one ToolHolderNode
+	/// </summary>
 	Mixed,
 }
 

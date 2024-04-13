@@ -3,9 +3,9 @@ using PowRxVar;
 
 namespace FastForms.Utils.RxUtils;
 
-public sealed class RxArr<T>(Disp d)
+public sealed class RxArr<T>(T[] initArr, Disp d)
 {
-	private readonly IRwVar<T[]> arr = Var.Make<T[]>([], d);
+	private readonly IRwVar<T[]> arr = Var.Make(initArr, d);
 	private readonly IRwVar<int> idx = Var.Make(0, d);
 
 	public IRoVar<T[]> Arr => arr;
@@ -15,7 +15,7 @@ public sealed class RxArr<T>(Disp d)
 	public int Count => Arr.V.Length;
 	public void SetIdx(int index)
 	{
-		Ass(index >= 0 && index < Arr.V.Length, "Wrong index");
+		AssMsg(index >= 0 && index < Arr.V.Length, "Wrong index");
 		idx.V = index;
 	}
 	public void Add(params T[] items) => idx.V = arr.ArrAdd(items);
@@ -75,7 +75,7 @@ file static class RxArrFileExt
 
 	private static T[] ArrDel<T>(this T[] arr, T elt)
 	{
-		Ass(arr.Contains(elt), "Elt not in array");
+		AssMsg(arr.Contains(elt), "Elt not in array");
 		var list = arr.ToList();
 		list.Remove(elt);
 		return [.. list];
@@ -83,7 +83,7 @@ file static class RxArrFileExt
 
 	private static T[] ArrInsert<T>(this T[] arr, T elt, int idx)
 	{
-		Ass(!arr.Contains(elt), "Elt already in array");
+		AssMsg(!arr.Contains(elt), "Elt already in array");
 		var list = arr.ToList();
 		list.Insert(idx, elt);
 		return [.. list];
@@ -92,7 +92,7 @@ file static class RxArrFileExt
 	private static T[] ArrMove<T>(this T[] arr, int idxSrc, int idxDst)
 	{
 		if (idxDst == idxSrc) return arr;
-		Ass(idxSrc >= 0 && idxDst >= 0 && idxSrc <= arr.Length && idxDst <= arr.Length, "Wrong indices");
+		AssMsg(idxSrc >= 0 && idxDst >= 0 && idxSrc <= arr.Length && idxDst <= arr.Length, "Wrong indices");
 		var list = arr.ToList();
 		var elt = list[idxSrc];
 		list.RemoveAt(idxSrc);

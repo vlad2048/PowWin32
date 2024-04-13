@@ -24,7 +24,7 @@ static class HolderWinPainter
         TabLabelLay? jerkLay
     )
     {
-        Ass(tabNames.Length >= 1, "Invalid Pane number");
+        AssMsg(tabNames.Length >= 1, "Invalid Pane number");
 
         PaintBorder(gfx, realR, isRoot);
         PaintTitleBar(gfx, r, title, active, btns.VisibleBtnCount);

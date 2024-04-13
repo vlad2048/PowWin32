@@ -31,7 +31,6 @@ static class PaneManager
 			)
 			.Subscribe(_ =>
 			{
-				//state.ActiveTab.V = Math.Max(0, Math.Min(state.PanesArr.Length - 1, state.ActiveTab.V));
 				for (var i = 0; i < state.Panes.Arr.V.Length; i++)
 					state.Panes.Arr.V[i].SetVisibility(i == state.Panes.Idx.V);
 				sys.Invalidate();

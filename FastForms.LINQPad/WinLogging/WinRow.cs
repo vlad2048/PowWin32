@@ -3,6 +3,7 @@ using FastForms.LINQPad.MessageLogging;
 using LINQPad;
 using LINQPad.Controls;
 using PowRxVar;
+using PowWin32.Geom;
 using Vanara.PInvoke;
 
 namespace FastForms.LINQPad.WinLogging;
@@ -80,6 +81,12 @@ file static class RenderExt
 		  </div>
 		  """
 	);
+
+	/*private static string Fmt(this R? r) => r switch
+	{
+		null => "_",
+		not null => $"{r}"
+	};*/
 
 	public static Literal Render(this CapNfo e) => new(
 		$$"""

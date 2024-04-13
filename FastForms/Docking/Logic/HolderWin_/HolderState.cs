@@ -46,10 +46,9 @@ public sealed class HolderState
 	private Disp D { get; }
 	private SysWin? sys;
 	private readonly HolderNode holderNode;
-	private readonly Pane[] initPanes;
 	private readonly IRwVar<Docker?> docker;
 	private readonly Subject<Pane[]> whenPanesAdded;
-	private IRoVar<bool> IsMaximized { get; }
+	private IRoVar<bool> IsToolSingleMaximized { get; }
 
 
 
@@ -66,16 +65,14 @@ public sealed class HolderState
 	public IRoVar<TreeType> TreeType { get; }
 
 
-
 	public HolderState(HolderNode holderNode, Pane[] initPanes, TabLabelLay? jerkLay, Disp d)
 	{
 		this.holderNode = holderNode;
-		this.initPanes = initPanes;
 		D = d;
 		docker = Var.Make<Docker?>(null, D);
 
 		whenPanesAdded = new Subject<Pane[]>().D(D);
-		Panes = new RxArr<Pane>(D);
+		Panes = new RxArr<Pane>(initPanes, D);
 
 		Autohide = Var.Make<IAutohide>(new AutohideOff(), D);
 		HoveredTab = Var.Make<int?>(null, D);
@@ -89,11 +86,11 @@ public sealed class HolderState
 				.Switch(),
 			D
 		);
-		IsMaximized = Var.Make(
+		IsToolSingleMaximized = Var.Make(
 			false,
 			docker
 				.Where(e => e != null)
-				.Select(e => e!.IsMaximized)
+				.Select(e => e!.IsToolSingleMaximized)
 				.Switch(),
 			D
 		);
@@ -108,13 +105,19 @@ public sealed class HolderState
 		if (sys == null)
 		{
 			MakeSysWin();
-			AddPanes(initPanes);
+			whenPanesAdded.OnNext(Panes.Arr.V);
 		}
 		else
 		{
 			User32.SetParent(Sys.Handle, Docker.Sys.Handle).Check();
 			sys.SetWindowPos_MoveSizeShow(holderNode.R);
 		}
+	}
+
+	public void Repaint()
+	{
+		Sys.Invalidate();
+		Panes.Arr.V.ForEach(pane => pane.Repaint());
 	}
 
 
@@ -124,14 +127,12 @@ public sealed class HolderState
 		whenPanesAdded.OnNext(panes);
 	}
 
-	public Pane[] GetAndRemovePanes() => Panes.GetAndRemove();
-
 
 
 
 	private void MakeSysWin()
 	{
-		Ass(sys == null, "Should  be null");
+		AssMsg(sys == null, "Should  be null");
 
 		// Create the window
 		// =================
@@ -147,7 +148,7 @@ public sealed class HolderState
 			() => Docker.TreeType.V is Enums.TreeType.ToolSingle ? new Pt(4, 3) : new Pt(5, 3)
 		);
 		btns.WhenClicked.Subscribe(btn => btn.Execute(Docker)).D(Sys.D);
-		Var.Merge(TreeType, IsMaximized, Autohide).Subscribe(_ => btns.ShowButtons(HolderBtnUtils.GetBtns(TreeType.V, IsMaximized.V, Autohide.V))).D(D);
+		Var.Merge(TreeType, IsToolSingleMaximized, Autohide).Subscribe(_ => btns.ShowButtons(HolderBtnUtils.GetBtns(TreeType.V, IsToolSingleMaximized.V, Autohide.V))).D(D);
 
 
 		// HitTesting (let caption mouse events pass through if TreeType == ToolSingle)

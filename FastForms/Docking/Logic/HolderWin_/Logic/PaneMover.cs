@@ -1,7 +1,6 @@
 ﻿using System.Reactive.Linq;
 using FastForms.Docking.Logic.HolderWin_.Painting;
 using FastForms.Utils;
-using FastForms.Utils.Win32;
 using FastForms.Utils.WinEventUtils;
 using PowWin32.Windows;
 using PowWin32.Windows.ReactiveLight;
@@ -73,8 +72,7 @@ static class PaneMover
                     var pane = st.Panes[st.IdxSrc];
                     var jerkLay = st.Lays[st.IdxSrc];
 
-					var (dockerDst, holderDst) = state.Docker.UndockPane(pane, jerkLay);
-					WinMoveInitiator.Start(dockerDst.Sys, st.GrabPosScr, () => holderDst.State.JerkLay.V = null);
+                    state.Docker.UndockPane(pane, jerkLay, st.GrabPosScr);
 				}
 			},
 

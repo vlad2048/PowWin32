@@ -19,7 +19,7 @@ static class HolderJerker
 		Func<Pt, bool> isOverBtn
 	)
 	{
-		var (state, sys, dockerSrc) = (holderNode.State, holderNode.State.Sys, holderNode.State.Docker);
+		var (state, sys) = (holderNode.State, holderNode.State.Sys);
 
 		sys.MouseCapture(
 			MouseButton.Left,
@@ -29,6 +29,7 @@ static class HolderJerker
 				if (state.TreeType.V == TreeType.ToolSingle) return May.None<Pt>();
 				var inCaption = mouse.Y <= HolderLayout.CaptionHeight + 1;
 				if (!inCaption || isOverBtn(mouse)) return May.None<Pt>();
+
 				return May.Some(sys.Client2Screen(mouse));
 			},
 
@@ -37,8 +38,7 @@ static class HolderJerker
 				if ((mouse - st).IsFurtherThan(JerkThreshold))
 				{
 					stop();
-					var dockerDst = dockerSrc.UndockHolder(holderNode);
-					WinMoveInitiator.Start(dockerDst.Sys, st, () => { });
+					state.Docker.UndockHolder(holderNode, st);
 				}
 			},
 

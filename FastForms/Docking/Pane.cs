@@ -27,6 +27,8 @@ public abstract class Pane
 	);
 
 	public NodeType Type { get; }
+
+	// TODO: only create the SysWin on SetParent / Attach
 	public SysWin Sys { get; } = new();
 
 	public string Name { get; }
@@ -46,17 +48,13 @@ public abstract class Pane
 		User32.EnableWindow(Sys.Handle, visible);
 		User32.ShowWindow(Sys.Handle, visible ? ShowWindowCommand.SW_SHOW : ShowWindowCommand.SW_HIDE);
 	}
+
+	internal void Repaint() => Sys.Invalidate();
 }
 
-public class ToolPane : Pane
-{
-	public ToolPane(string name) : base(NodeType.Tool, name) {}
-}
+public class ToolPane(string name) : Pane(NodeType.Tool, name);
 
-public class DocPane : Pane
-{
-	public DocPane(string name) : base(NodeType.Doc, name) {}
-}
+public class DocPane(string name) : Pane(NodeType.Doc, name);
 
 
 
