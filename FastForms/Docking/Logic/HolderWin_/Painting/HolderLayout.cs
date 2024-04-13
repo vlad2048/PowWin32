@@ -1,4 +1,6 @@
-﻿using FastForms.Utils.GdiUtils;
+﻿using FastForms.Docking.Logic.DropLogic_.Painting;
+using FastForms.Docking.Logic.DropLogic_.Structs;
+using FastForms.Utils.GdiUtils;
 using PowWin32.Geom;
 using Style = FastForms.Docking.Logic.HolderWin_.Painting.HolderWinPainterStyle;
 
@@ -27,6 +29,10 @@ static class HolderLayout
 
     public static readonly Marg WinBorderMarg = new(0, 1, 1, 1);
 
+
+    public static R GetCaptionR(R r) => new(r.X, r.Y, r.Width, CaptionHeight);
+
+
 	public static R AdjustClientR(R r, bool isRoot) => r - (isRoot ? AdjMargRoot : AdjMargNotRoot);
 
 	public static R GetPaneR(R r, int tabCount, TabLabelLay? jerkLay) => r - (tabCount > 1 || jerkLay != null ? PaneMargMultipleTabs : PaneMargSingleTab);
@@ -47,17 +53,41 @@ static class HolderLayout
         int[] xs = [.. tabNames.Select(e => Style.Font.MeasureText(e).Width + 2 * TabLabelLay.TabLabelHorzPad)];
         var space = Math.Max(0, r.Width);
         var labelSizes = TabShrinker.Shrink(space, MinTabLabelWidth, xs);
-        var arr = new R[tabNames.Length];
+        var arr = new R[xs.Length];
         var x = r.X;
         var y = GetTabsRowY(r);
         for (var i = 0; i < labelSizes.Length; i++)
         {
-            var labelSize = labelSizes[i];
-            arr[i] = new R(x, y, labelSize, CaptionHeight);
-            x += labelSize;
+            arr[i] = new R(x, y, labelSizes[i], CaptionHeight);
+            x += labelSizes[i];
         }
         return [..arr.Select(e => new TabLabelLay(e))];
     }
+
+    public static (TabGeom[], R[]) GetTabInserts(R r, string[] tabNames)
+    {
+	    Ass(tabNames.Length > 0);
+        int[] xs = [.. tabNames.Select(e => Style.Font.MeasureText(e).Width + 2 * TabLabelLay.TabLabelHorzPad), DropPainterStyle.InsertTabLng];
+        var space = Math.Max(0, r.Width);
+        var labelSizes = TabShrinker.Shrink(space, MinTabLabelWidth, xs);
+        var tabs = new TabGeom[xs.Length];
+        var rs = new R[xs.Length];
+        var x = r.X;
+        var y = GetTabsRowY(r);
+        for (var i = 0; i < xs.Length; i++)
+        {
+	        tabs[i] = new TabGeom(SDir.Down, x, labelSizes[i]);
+	        rs[i] = new R(x, y, labelSizes[i], CaptionHeight);
+	        x += xs[i];
+        }
+        if (tabNames.Length == 1)
+        {
+	        tabs = [tabs[0]];
+	        rs = [rs[0]];
+        }
+        return (tabs, rs);
+    }
+
 
 
     private static int GetTabsRowY(R r) => Math.Max(r.Y + CaptionHeight, r.Bottom - CaptionHeight);

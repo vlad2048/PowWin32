@@ -26,6 +26,65 @@ public static class MouseEventExt
 		.ToUnit();
 
 
+	private static readonly User32.SafeHCURSOR defaultCursor = User32.LoadCursor(default, User32.IDC_ARROW);
+
+	public static void MouseCaptureCursor<S>(
+		this SysWin sys,
+		MouseButton btn,
+		Func<Pt, Maybe<User32.SafeHCURSOR>> cursorFun,
+		Func<Pt, S> onStart,
+		Action<Pt, S> onMove
+	)
+	{
+		var state = May.None<S>();
+
+		void Start(S s)
+		{
+			state = May.Some(s);
+			User32.SetCapture(sys.Handle);
+		}
+		void Stop()
+		{
+			User32.ReleaseCapture();
+		}
+
+		sys.WhenMove()
+			.Subscribe(p =>
+			{
+				if (state.IsNone(out var state_))
+					User32.SetCursor(cursorFun(p).IsSome(out var cur) ? cur : defaultCursor);
+				else
+					onMove(p, state_);
+			}).D(sys.D);
+
+
+		sys.WhenBtnDown(btn)
+			.Where(p => state.IsNone() && cursorFun(p).IsSome())
+			.Subscribe(p =>
+			{
+				var st = onStart(p);
+				Start(st);
+			}).D(sys.D);
+
+		sys.WhenBtnUp(btn)
+			.Where(_ => state.IsSome())
+			.Subscribe(_ =>
+			{
+				Stop();
+			}).D(sys.D);
+
+		sys.WhenCaptureLost().Subscribe(_ =>
+		{
+			if (state.IsNone(out var stateVal)) return;
+
+			//onRelease(stateVal);
+
+			state = May.None<S>();
+		}).D(sys.D);
+	}
+
+
+
 
 	public static Func<bool> MouseCapture<S>(
 		this SysWin sys,
@@ -39,7 +98,6 @@ public static class MouseEventExt
 
 		void Start(S s)
 		{
-			//L($"State <- {s}");
 			state = May.Some(s);
 			User32.SetCapture(sys.Handle);
 		}
@@ -78,7 +136,6 @@ public static class MouseEventExt
 			if (state.IsNone(out var stateVal)) return;
 
 			onRelease(stateVal);
-			//L("State <- _");
 			state = May.None<S>();
 		}).D(sys.D);
 

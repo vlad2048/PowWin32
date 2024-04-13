@@ -10,11 +10,12 @@ using PowMaybe;
 using PowRxVar;
 using PowWin32.Geom;
 using PowWin32.Windows.Utils;
+using FastForms.Docking.Logic.HolderWin_;
 
-namespace FastForms.Docking.Logic.HolderWin_.Logic;
+namespace FastForms.Docking.Logic.DockerInteractions_;
 
 
-static class PaneMover
+static class PaneReorderingAndUndocking
 {
     private static readonly Marg TearoffMarg = new(23, 23, 23, 23);
 
@@ -73,8 +74,8 @@ static class PaneMover
                     var jerkLay = st.Lays[st.IdxSrc];
 
                     state.Docker.UndockPane(pane, jerkLay, st.GrabPosScr);
-				}
-			},
+                }
+            },
 
             _ =>
             {

@@ -31,10 +31,14 @@ public abstract class Pane(NodeType type, string name)
 	public string Name { get; } = name;
 	public SysWin Sys { get; } = new();
 
+	public override string ToString() => Name;
 
 	internal void SetParent(SysWin holderWin, R r) => Sys.CreateMove(holderWin.Handle, r, Class, Styles);
 
-	internal void SetR(R r) => Sys.SetWindowPos_MoveSize(r);
+	internal void SetR(R r)
+	{
+		Sys.SetWindowPos_MoveSize(r);
+	}
 
 	internal void SetVisibility(bool visible)
 	{

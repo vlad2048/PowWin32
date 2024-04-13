@@ -19,12 +19,6 @@ public static class Var
 
 
 
-	public static IRoVar<U> SelectVar<T, U>(this IRoVar<T> rx, Func<T, U> fun, Disp d) => Make(fun(rx.V), rx.Select(fun), d);
-
-
-	//public static IRoVar<U> Switch<T, U>(this IRoVar<T> rx, Func<T, IRoVar<U>> sel)
-
-
 	public static IRoVar<T> ToVar<T>(this IObservable<T> obs, Disp d) => new RoVar<T>(obs.MakeReplay(d));
 
 

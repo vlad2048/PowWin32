@@ -1,16 +1,23 @@
 ﻿using FastForms.Docking.Enums;
+using FastForms.Docking.Logic.DropLogic_.Painting;
 using FastForms.Docking.Logic.DropLogic_.Structs;
 using FastForms.Docking.Logic.Layout_.Enums;
 using FastForms.Docking.Logic.Layout_.Nodes;
 using FastForms.Docking.Structs;
 using PowWin32.Geom;
 using PowWin32.Windows.Utils;
+using Layout = FastForms.Docking.Logic.HolderWin_.Painting.HolderLayout;
 
 namespace FastForms.Docking.Logic.DropLogic_;
 
 
 static class ZoneQuerier
 {
+	private const bool AllowToolInDoc = false;
+	
+	
+	
+	
 	public static Zone[] QueryZones(this Docker dockerDst, Docker dockerSrc) =>
 		Query(dockerDst, dockerSrc)
 			.ToScreen();
@@ -19,14 +26,12 @@ static class ZoneQuerier
 	private static Zone[] Query(
 		Docker dockerDst,
 		Docker dockerSrc
-	)
-	{
-		if (dockerSrc.Root.Count(e => e.V is HolderNode) == 0)
-			return [];
-
-		return dockerSrc.TreeType.V switch
+	) =>
+		dockerSrc.TreeType.V switch
 		{
-			TreeType.Tool or TreeType.ToolSingle =>
+			TreeType.Empty => [],
+
+			TreeType.Tool =>
 				[.. dockerDst.Root.SelectMany(node => QueryForTool(dockerDst, node))],
 
 			TreeType.Doc =>
@@ -37,7 +42,6 @@ static class ZoneQuerier
 
 			_ => throw new ArgumentException()
 		};
-	}
 
 
 	// ***************
@@ -48,23 +52,27 @@ static class ZoneQuerier
 	private static Zone[] QueryForTool(Docker dockerDst, TNod<INode> node) =>
 		node.V switch
 		{
-			ToolRootNode when dockerDst.TreeType.V is TreeType.Tool && node.Kids.Count == 0 =>
-				[MakeToolRootInitZone(dockerDst, node.V.R)],
-
-			ToolRootNode when dockerDst.TreeType.V is TreeType.Doc or TreeType.Mixed =>
+			ToolRootNode when dockerDst.TreeType.V is TreeType.Empty && node.Kids is [] =>
+				//[MakeToolRootInitZone(dockerDst, node.V.R)],
 				[],
+
+			ToolRootNode when dockerDst.TreeType.V is TreeType.Doc or TreeType.Mixed || node.Kids is [{V: DocRootNode, Kids: [] }] =>
 				//MakeToolRootZones(dockerDst, node.V.R),
+				[],
 
 			ToolHolderNode holder =>
-				[MakeToolHolderZone(dockerDst, holder)],
+				[
+					ToolHolderInsertPanesZone(dockerDst, holder),
+					MakeToolHolderZone(dockerDst, holder),
+				],
 
 			DocRootNode when node.Kids.Count == 0 =>
-				[],
 				//[MakeToolDocRootInitZone(dockerDst, node.V.R)],
-
-			DocHolderNode holder =>
 				[],
-				//[MakeToolInDocHolderZone(dockerDst, holder, rootDst)],
+
+			DocHolderNode holder when AllowToolInDoc =>
+				//[MakeToolInDocHolderZone(dockerDst, holder)],
+				[],
 
 			_ => [],
 		};
@@ -156,6 +164,45 @@ static class ZoneQuerier
 	}
 
 
+	// ToolHolderInsertPanes Zone
+	// ==========================
+	private static Zone ToolHolderInsertPanesZone(Docker docker, ToolHolderNode holder)
+	{
+		var zoneR = holder.R;
+		var captionR = Layout.GetCaptionR(zoneR);
+		var (tabs, rs) = Layout.GetTabInserts(zoneR, [..holder.State.Panes.Arr.V.Select(e => e.Name)]);
+
+		return new Zone(
+			docker,
+			$"ToolHolderInsertPanes({zoneR})",
+			new RSet([captionR, ..rs]),
+			R.Empty,
+			ZoneBmp.None,
+			[
+				new Drop(
+					docker,
+					$"ToolHolderInsertPanes({zoneR}).AtCaption(0)",
+					captionR,
+					new NoneDropBmp(),
+					Geom.ForTab(zoneR, tabs[0]),
+					new MergeTarget(holder, 0)
+				),
+				..tabs.Zip(rs)
+					.Select(t => (tab: t.First, r: t.Second))
+					.Select((t, idx) => new Drop(
+						docker,
+						$"ToolHolderInsertPanes({zoneR}).At({idx})",
+						t.r,
+						new NoneDropBmp(),
+						Geom.ForTab(zoneR, t.tab),
+						new MergeTarget(holder, idx)
+					))
+			]
+		);
+	}
+
+
+
 	// ToolDocRootInit Zone
 	// ====================
 	private static Zone MakeToolDocRootInitZone(Docker dockerDst, R zoneR)
@@ -168,14 +215,19 @@ static class ZoneQuerier
 			bmpR,
 			ZoneBmp.Big,
 			[
-				new Drop(
-					dockerDst,
-					"DocRootInit.Init",
-					ZoneBig.MakeCenterR(bmpR),
-					new MergeDropBmp(),
-					Geom.ForNode(zoneR),
-					new InitTarget(NodeType.Doc)
-				),
+				..AllowToolInDoc
+					?
+					[
+						new Drop(
+							dockerDst,
+							"DocRootInit.Init",
+							ZoneBig.MakeCenterR(bmpR),
+							new MergeDropBmp(),
+							Geom.ForNode(zoneR),
+							new InitTarget(NodeType.Doc)
+						)
+					]
+					: (Drop[]) [],
 				..Enum.GetValues<SDir>()
 					.Select(dir => new Drop(
 						dockerDst,
@@ -214,15 +266,22 @@ static class ZoneQuerier
 			bmpR,
 			ZoneBmp.Big,
 			[
-				new Drop(
-					dockerDst,
-					$"ToolInDoc({zoneR}).Merge",
-					ZoneBig.MakeCenterR(bmpR),
-					new MergeDropBmp(),
-					Geom.ForNode(zoneR),
-					new MergeTarget(holder)
-				),
+				..AllowToolInDoc
+					?
+					[
+						new Drop(
+							dockerDst,
+							$"ToolInDoc({zoneR}).Merge",
+							ZoneBig.MakeCenterR(bmpR),
+							new MergeDropBmp(),
+							Geom.ForNode(zoneR),
+							new MergeTarget(holder)
+						)
+					]
+					: (Drop[]) [],
+
 				..Enum.GetValues<SDir>()
+					.Where(_ => AllowToolInDoc)
 					.Select(dir => new Drop(
 						dockerDst,
 						$"ToolInDoc({zoneR}).Split({dir})",
@@ -231,6 +290,7 @@ static class ZoneQuerier
 						Geom.ForNodeSide(zoneR, dir),
 						new SplitTarget(holder, dir)
 					)),
+
 				..dirs.Select(dir => new Drop(
 					dockerDst,
 					$"ToolInDoc({zoneR}).SplitRoot({dir})",

@@ -7,8 +7,17 @@ public interface IWhenChanged
 	IObservable<Unit> WhenChanged { get; }
 }
 
+
+/*
+public sealed class RoDisp(Disp d)
+{
+	public void Add(IDisposable disposable) => d.Add(disposable);
+}
+*/
+
 public interface IRoVar<out T> : IObservable<T>, IWhenChanged
 {
+	//RoDisp RoD { get; }
 	T V { get; }
 }
 

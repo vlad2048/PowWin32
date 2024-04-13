@@ -17,11 +17,13 @@ using Vanara.PInvoke;
 using FastForms.Docking.Utils;
 using FastForms.Docking.Logic.DockerWin_.Painting;
 using FastForms.Docking.Logic.DockerWin_.Structs;
-using FastForms.Docking.Logic.DropLogic_;
 using FastForms.Docking.Utils.Btns_;
 using FastForms.Utils.GdiUtils;
 using FastForms.Docking.Structs;
 using PowTrees.Algorithms;
+using FastForms.Docking.Logic.DockerInteractions_;
+using FastForms.Utils.WinEventUtils;
+using PowWin32.Windows.StructsPInvoke;
 
 
 namespace FastForms.Docking;
@@ -39,8 +41,11 @@ public sealed class Docker
 
 	public Disp D { get; }
 	public SysWin Sys { get; }
+
 	public IRoVar<TreeType> TreeType { get; }
-	public IRoVar<bool> IsToolSingleMaximized { get; }
+	public IRoVar<bool> IsHolderFrame { get; }
+	public IRoVar<bool> IsMaximized { get; }
+
 	public IRwVar<HolderNode?> ActiveHolder { get; }
 	public TNod<INode> Root { get; }
 	public string Name { get; set; }
@@ -66,21 +71,23 @@ public sealed class Docker
 			true => mainWindow.D,
 			false => new Disp(nameof(Docker))
 		};
-		var treeType = Var.Make(Root.ComputeTreeType(IsMainWindow), D);
-		TreeType = treeType;
 		whenTreeMod = new Subject<ITreeMod>().D(D);
 		ActiveHolder = Var.Make<HolderNode?>(null, D);
+		ActiveHolder.Log();
 
+		TreeType = Vars.GetTreeType(Root, WhenTreeMod, D);
+		IsHolderFrame = Vars.GetIsHolderFrame(Root, WhenTreeMod, IsMainWindow, D);
 
 		// Create a SysWin if one is not provided
 		// ======================================
 		Sys = IsMainWindow switch
 		{
 			true => mainWindow,
-			false => DockerFileUtils.MakeSysWin(D, treeType, otherR ?? throw new ArgumentException("Impossible"), mainWindow, dbg),
+			false => SysWinMaker.Make(D, TreeType, IsHolderFrame, otherR ?? throw new ArgumentException("Impossible"), mainWindow, dbg),
 		};
 		Sys.SetProp(DockingConsts.PropNames.Docker, this);
-		IsToolSingleMaximized = Sys.IsToolSingleMaximized(TreeType);
+
+		IsMaximized = Sys.GetIsMaximized();
 
 
 
@@ -98,7 +105,6 @@ public sealed class Docker
 			switch (mod)
 			{
 				case InitTreeMod:
-					treeType.V = Root.ComputeTreeType(IsMainWindow);
 					Root.V.R = Sys.ClientR;
 					LayoutCalculator.Compute(Root, TreeType.V);
 					Root.OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Attach(this));
@@ -110,7 +116,6 @@ public sealed class Docker
 					break;
 
 				case AddHoldersTreeMod { Holders: var holders }:
-					treeType.V = Root.ComputeTreeType(IsMainWindow);
 					Root.V.R = Sys.ClientR;
 					LayoutCalculator.Compute(Root, TreeType.V);
 					holders.ForEach(holder => holder.State.Attach(this));
@@ -118,7 +123,6 @@ public sealed class Docker
 					break;
 
 				case RecomputeLayoutTreeMod:
-					treeType.V = Root.ComputeTreeType(IsMainWindow);
 					LayoutCalculator.Compute(Root, TreeType.V);
 					LayoutApplier.Apply(Root);
 					break;
@@ -145,17 +149,74 @@ public sealed class Docker
 
 		// Handle Docking
 		// ==============
-		Dropper.Setup(this);
+		DockerDocking.Setup(this);
 
 
 		// Initial Layout
 		// ==============
 		TriggerTreeMod(new InitTreeMod());
 
+		// Handle Split Resizing
+		// =====================
+		SplitResizing.Setup(this);
+
+		ActiveHolder.Subscribe(_ =>
+		{
+			TriggerTreeMod(new PaintNodeTreeMod(Root.V));
+		}).D(D);
+
 
 		// Show Window
 		// ===========
 		Sys.Show();
+
+
+		var idx = 0;
+
+		Sys.WhenKey(VirtualKey.S).Subscribe(_ =>
+		{
+			var splitNode = Root.Select(e => e.V).OfType<SplitNode>().FirstOrDefault();
+			if (splitNode == null) return;
+			splitNode.Pos = (idx++ % 2 == 0) ? 50 : 200;
+			TriggerTreeMod(new RecomputeLayoutTreeMod());
+		}).D(D);
+	}
+}
+
+
+
+
+file static class Vars
+{
+	public static IRoVar<TreeType> GetTreeType(TNod<INode> root, IObservable<ITreeMod> whenTreeMod, Disp d) =>
+		Var.Make(
+			root.ComputeTreeType(),
+			whenTreeMod.Select(_ => root.ComputeTreeType()),
+			d
+		);
+
+	public static IRoVar<bool> GetIsHolderFrame(TNod<INode> root, IObservable<ITreeMod> whenTreeMod, bool isMainWindow, Disp d)
+	{
+		bool Compute() => !isMainWindow && root.Kids is [{ V: ToolHolderNode }];
+		return Var.Make(
+			Compute(),
+			whenTreeMod.Select(_ => Compute()),
+			d
+		);
+	}
+
+
+	private static TreeType ComputeTreeType(this TNod<INode> root)
+	{
+		var toolCnt = root.Count(e => e.V is ToolHolderNode);
+		var docCnt = root.Count(e => e.V is DocHolderNode);
+		return (toolCnt, docCnt) switch
+		{
+			(0, 0) => TreeType.Empty,
+			(_, 0) => TreeType.Tool,
+			(0, _) => TreeType.Doc,
+			_ => TreeType.Mixed
+		};
 	}
 }
 
@@ -163,9 +224,7 @@ public sealed class Docker
 
 
 
-
-
-file static class DockerFileUtils
+file static class SysWinMaker
 {
 	private static readonly Gdi32.SafeHBRUSH BkgBrush = MkBrushGdi(0xEEEEF2);
 	private static readonly WinClass Class = new(
@@ -182,9 +241,9 @@ file static class DockerFileUtils
 
 
 
-	public static SysWin MakeSysWin(Disp d, IRoVar<TreeType> treeType, R otherR, SysWin? mainWindow, bool dbg)
+	public static SysWin Make(Disp d, IRoVar<TreeType> treeType, IRoVar<bool> isHolderFrame, R otherR, SysWin? mainWindow, bool dbg)
 	{
-		var sys = new SysWin(d, clientR => DockerLayout.AdjustClientR(clientR, treeType.V is TreeType.ToolSingle));
+		var sys = new SysWin(d, clientR => DockerLayout.AdjustClientR(clientR, isHolderFrame.V));
 
 		sys.EnableMouseTracking();
 		var isMaximized = sys.GetIsMaximized();
@@ -193,12 +252,12 @@ file static class DockerFileUtils
 		HitTester.ForFrame(sys, DockerLayout.CaptionHeight + 1, btns.IsOverAnyButton);
 		btns.WhenClicked.Subscribe(btn => btn.Execute(sys)).D(sys.D);
 
-		Var.Merge(treeType, isMaximized).Subscribe(_ => btns.ShowButtons(DockerWinSysBtnUtils.GetBtns(treeType.V, isMaximized.V))).D(sys.D);
+		Var.Merge(treeType, isMaximized).Subscribe(_ => btns.ShowButtons(DockerWinSysBtnUtils.GetBtns(treeType.V, isHolderFrame.V, isMaximized.V))).D(sys.D);
 
 		sys.Evt.WhenPaint.Subs((ref PaintPacket e) =>
 		{
 			if (dbg) L($"Paint: {treeType.V}");
-			if (treeType.V is TreeType.ToolSingle) return;
+			if (isHolderFrame.V) return;
 			using var _ = e.Paint(out var gfx);
 			DockerWinPainter.Paint(
 				gfx,
@@ -211,19 +270,6 @@ file static class DockerFileUtils
 
 		Class.CreateWindow(sys, Styles, otherR, mainWindow?.Handle ?? 0, "DockerWin");
 		return sys;
-	}
-
-
-
-
-	public static IRoVar<bool> IsToolSingleMaximized(this SysWin sys, IRoVar<TreeType> treeType)
-	{
-		var sysIsMax = sys.GetIsMaximized();
-		return Var.Make(
-			sysIsMax.V && treeType.V is TreeType.ToolSingle,
-			Var.Merge(sysIsMax, treeType).Select(_ => sysIsMax.V && treeType.V is TreeType.ToolSingle),
-			sys.D
-		);
 	}
 }
 

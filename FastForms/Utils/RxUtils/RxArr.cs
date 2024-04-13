@@ -18,17 +18,17 @@ public sealed class RxArr<T>(T[] initArr, Disp d)
 		AssMsg(index >= 0 && index < Arr.V.Length, "Wrong index");
 		idx.V = index;
 	}
-	public void Add(params T[] items) => idx.V = arr.ArrAdd(items);
+	public void Add(T[] items, int? insertIndex) => idx.V = arr.ArrAdd(items, insertIndex);
 	public void Del(T item) => idx.V = arr.ArrDel(item, Idx.V);
-	public void Insert(T item, int index) => idx.V = arr.ArrInsert(item, index);
+	//public void Insert(T item, int index) => idx.V = arr.ArrInsert(item, index);
 
-	public T[] GetAndRemove()
+	/*public T[] GetAndRemove()
 	{
 		var res = arr.V;
 		arr.V = [];
 		idx.V = 0;
 		return res;
-	}
+	}*/
 
 	//public void Move(T[] itemsCopy, int idxSrc, int idxDst) => idx.V = arr.ArrMove(itemsCopy, idxSrc, idxDst);
 
@@ -40,12 +40,21 @@ public sealed class RxArr<T>(T[] initArr, Disp d)
 
 file static class RxArrFileExt
 {
-	public static int ArrAdd<T>(this IRwVar<T[]> arr, T[] elts)
+	public static int ArrAdd<T>(this IRwVar<T[]> arr, T[] elts, int? insertIndex)
 	{
 		var list = arr.V.ToList();
-		list.AddRange(elts);
-		arr.V = [.. list];
-		return arr.V.Length - 1;
+		if (insertIndex.HasValue)
+		{
+			list.InsertRange(insertIndex.Value, elts);
+			arr.V = [.. list];
+			return insertIndex.Value + elts.Length - 1;
+		}
+		else
+		{
+			list.AddRange(elts);
+			arr.V = [.. list];
+			return arr.V.Length - 1;
+		}
 	}
 
 	public static int ArrDel<T>(this IRwVar<T[]> arr, T elt, int idx)
@@ -54,11 +63,11 @@ file static class RxArrFileExt
 		return idx.Cap(arr);
 	}
 
-	public static int ArrInsert<T>(this IRwVar<T[]> arr, T elt, int idx)
+	/*public static int ArrInsert<T>(this IRwVar<T[]> arr, T elt, int idx)
 	{
 		arr.V = arr.V.ArrInsert(elt, idx);
 		return idx;
-	}
+	}*/
 
 	public static int ArrMove<T>(this IRwVar<T[]> arr, int idxSrc, int idxDst)
 	{

@@ -8,6 +8,7 @@ static class DropPainterStyle
 {
 	public const int GeomTabWidth = 21;
 	public const int GeomMarg = 5;
+	public const int InsertTabLng = 100;
 	public static readonly Brush GeomInner = MkBrush(0x006CBE, 102);
 	public static readonly Brush GeomOuter = MkBrush(0xFFFFFF, 102);
 

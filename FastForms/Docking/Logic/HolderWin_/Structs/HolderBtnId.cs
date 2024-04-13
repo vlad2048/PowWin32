@@ -1,5 +1,4 @@
 ﻿using FastForms.Docking.Enums;
-using FastForms.Utils;
 using Vanara.PInvoke;
 
 namespace FastForms.Docking.Logic.HolderWin_.Structs;
@@ -29,7 +28,22 @@ static class HolderBtnBmps
 
 static class HolderBtnUtils
 {
-	public static HolderBtnId[] GetBtns(TreeType treeType, bool isMaximized, IAutohide autohide) =>
+	public static HolderBtnId[] GetBtns(TreeType treeType, bool isHolderFrame, bool isMaximized, IAutohide autohide) =>
+		(isHolderFrame, isMaximized) switch
+		{
+			(true, false) => [HolderBtnId.Menu, HolderBtnId.Maximize, HolderBtnId.Close],
+			(true, true) => [HolderBtnId.Menu, HolderBtnId.Restore, HolderBtnId.Close],
+
+			(false, _) => (treeType, autohide) switch
+			{
+				(TreeType.Empty or TreeType.Tool, _) => [HolderBtnId.Menu, HolderBtnId.Close],
+				(TreeType.Doc or TreeType.Mixed, AutohideOff) => [HolderBtnId.Menu, HolderBtnId.AutohideOn, HolderBtnId.Close],
+				(TreeType.Doc or TreeType.Mixed, AutohideOn) => [HolderBtnId.Menu, HolderBtnId.AutohideOff, HolderBtnId.Close],
+				_ => throw new ArgumentException("Invalid combination"),
+			},
+		};
+
+	/*public static HolderBtnId[] GetBtns(TreeType treeType, bool isMaximized, IAutohide autohide) =>
 		(treeType, isMaximized, autohide) switch
 		{
 			(TreeType.ToolSingle, false, _) => [HolderBtnId.Menu, HolderBtnId.Maximize, HolderBtnId.Close],
@@ -41,7 +55,7 @@ static class HolderBtnUtils
 			(TreeType.Doc or TreeType.Mixed, _, AutohideOn) => [HolderBtnId.Menu, HolderBtnId.AutohideOff, HolderBtnId.Close],
 
 			_ => throw new ArgumentException("Invalid combination")
-		};
+		};*/
 
 
 
@@ -66,9 +80,8 @@ static class HolderBtnUtils
 			case HolderBtnId.AutohideOff:
 				break;
 
-			case HolderBtnId.Close when docker.TreeType.V is TreeType.ToolSingle:
+			case HolderBtnId.Close when docker.IsHolderFrame.V:
 				docker.Sys.Destroy();
-				//docker.Sys.Dispose();
 				break;
 		}
 	}

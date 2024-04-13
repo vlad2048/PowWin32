@@ -1,9 +1,53 @@
-﻿using FastForms.Docking.Logic.Layout_.Enums;
-using FastForms.Docking.Logic.Layout_.Nodes;
-
-namespace FastForms.Docking.Enums;
+﻿namespace FastForms.Docking.Enums;
 
 
+public enum TreeType
+{
+	/// <summary>
+	/// Contains no Holders
+	/// So the tree can be either:
+	///   Rᵀ ━━━ ∅
+	///   Rᵀ ━━━ Rᴰ ━━━ ∅
+	/// </summary>
+	Empty,
+
+	/// <summary>
+	/// Contains only ToolHolders
+	/// </summary>
+	Tool,
+
+	/// <summary>
+	/// Contains only DocHolders
+	/// </summary>
+	Doc,
+
+	/// <summary>
+	/// Contains both ToolHolders and DocHolders
+	/// </summary>
+	Mixed,
+}
+
+
+/*
+public enum HolderFrameState
+{
+	None,
+
+	ToolFrameNormal,
+
+	ToolFrameMaximized,
+}
+
+
+static class HolderFrameStateExt
+{
+	public static bool IsToolFrame(this HolderFrameState state) => state is HolderFrameState.ToolFrameNormal or HolderFrameState.ToolFrameMaximized;
+}
+*/
+
+
+
+/*
 public enum TreeType
 {
 	/// <summary>
@@ -49,3 +93,4 @@ static class TreeTypeExt
 
 	public static int GetMargin(this TreeType type) => type is TreeType.Doc or TreeType.Mixed ? DockingConsts.MarginDoc : DockingConsts.MarginTool;
 }
+*/

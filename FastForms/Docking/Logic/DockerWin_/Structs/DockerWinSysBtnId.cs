@@ -1,7 +1,5 @@
 ﻿using FastForms.Docking.Enums;
-using FastForms.Utils;
 using PowWin32.Windows;
-using static Vanara.PInvoke.Kernel32;
 using Vanara.PInvoke;
 
 namespace FastForms.Docking.Logic.DockerWin_.Structs;
@@ -28,7 +26,21 @@ static class DockerWinSysBtnBmps
 
 static class DockerWinSysBtnUtils
 {
-	public static DockerWinSysBtnId[] GetBtns(TreeType type, bool isMaximized) =>
+	public static DockerWinSysBtnId[] GetBtns(TreeType treeType, bool isHolderFrame, bool isMaximized) =>
+		isHolderFrame switch
+		{
+			true => [],
+			false => (treeType, isMaximized) switch
+			{
+				(TreeType.Empty or TreeType.Tool, false) => [DockerWinSysBtnId.Maximize, DockerWinSysBtnId.Close],
+				(TreeType.Empty or TreeType.Tool, true) => [DockerWinSysBtnId.Restore, DockerWinSysBtnId.Close],
+				(TreeType.Doc or TreeType.Mixed, false) => [DockerWinSysBtnId.Minimize, DockerWinSysBtnId.Maximize, DockerWinSysBtnId.Close],
+				(TreeType.Doc or TreeType.Mixed, true) => [DockerWinSysBtnId.Minimize, DockerWinSysBtnId.Restore, DockerWinSysBtnId.Close],
+				_ => throw new ArgumentException()
+			},
+		};
+
+	/*public static DockerWinSysBtnId[] GetBtns(TreeType type, bool isMaximized) =>
 		(type, isMaximized) switch
 		{
 			(TreeType.ToolSingle, _) => [],
@@ -37,7 +49,7 @@ static class DockerWinSysBtnUtils
 			(TreeType.Doc or TreeType.Mixed, false) => [DockerWinSysBtnId.Minimize, DockerWinSysBtnId.Maximize, DockerWinSysBtnId.Close],
 			(TreeType.Doc or TreeType.Mixed, true) => [DockerWinSysBtnId.Minimize, DockerWinSysBtnId.Restore, DockerWinSysBtnId.Close],
 			_ => throw new ArgumentException()
-		};
+		};*/
 
 	public static void Execute(this DockerWinSysBtnId btn, SysWin sys)
 	{

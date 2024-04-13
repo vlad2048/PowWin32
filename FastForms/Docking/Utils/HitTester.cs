@@ -57,17 +57,25 @@ static class HitTester
 				{
 					if (p.Y <= mTop)
 					{
-						var isLeft = p.X <= r.X + m;
-						var isRight = p.X >= r.Right - m;
-						var val = (isLeft, isRight) switch
+						if (p.X <= 50)
 						{
-							(false, false) => HitTestValues.HTTOP,
-							(true, false) => HitTestValues.HTTOPLEFT,
-							(false, true) => HitTestValues.HTTOPRIGHT,
-							(true, true) => Math.Abs(p.X) < Math.Abs(p.X - r.Right) ? HitTestValues.HTTOPLEFT : HitTestValues.HTTOPRIGHT,
-						};
-						e.Result = val;
-						e.Handled = true;
+							e.Result = HitTestValues.HTCAPTION;
+							e.Handled = true;
+						}
+						else
+						{
+							var isLeft = p.X <= r.X + m;
+							var isRight = p.X >= r.Right - m;
+							var val = (isLeft, isRight) switch
+							{
+								(false, false) => HitTestValues.HTTOP,
+								(true, false) => HitTestValues.HTTOPLEFT,
+								(false, true) => HitTestValues.HTTOPRIGHT,
+								(true, true) => Math.Abs(p.X) < Math.Abs(p.X - r.Right) ? HitTestValues.HTTOPLEFT : HitTestValues.HTTOPRIGHT,
+							};
+							e.Result = val;
+							e.Handled = true;
+						}
 					}
 					else if (p.Y <= captionHeight)
 					{

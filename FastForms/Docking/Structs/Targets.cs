@@ -53,7 +53,7 @@ interface ISplitTarget : ITarget
 	SDir Dir { get; }
 }
 
-sealed record MergeTarget(HolderNode Holder) : ITarget
+sealed record MergeTarget(HolderNode Holder, int? InsertIndex = null) : ITarget
 {
 	public NodeType DstType => Holder.Type;
 }

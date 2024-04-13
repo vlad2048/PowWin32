@@ -1,6 +1,7 @@
 ﻿using FastForms.Docking.Logic.HolderWin_;
 using FastForms.Docking.Logic.HolderWin_.Painting;
 using FastForms.Docking.Logic.Layout_.Enums;
+using PowBasics.CollectionsExt;
 using PowRxVar;
 using PowWin32.Geom;
 
@@ -21,7 +22,7 @@ public abstract class HolderNode : INode
 		State = new HolderState(this, panes, jerkLay, D);
 	}
 
-	public override string ToString() => $"Holder  r:{R}";
+	public override string ToString() => $"Holder({State.Panes.Arr.V.JoinText("; ")})";
 
 
 

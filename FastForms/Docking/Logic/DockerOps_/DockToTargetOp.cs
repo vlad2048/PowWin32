@@ -38,10 +38,10 @@ static class DockToTargetOp
 		Ass(srcNod.OfTypeNod<INode, HolderNode>().Sum(e => e.State.Panes.Count) > 0);
 		var srcHolders = srcNod.OfTypeNod<INode, HolderNode>().ToArray();
 
-		if (target is MergeTarget { Holder: var dstHolder })
+		if (target is MergeTarget { Holder: var dstHolder, InsertIndex: var insertIndex })
 		{
 			var srcPanes = srcHolders.SelectMany(e => e.State.Panes.Arr.V).ToArray();
-			dstHolder.State.AddPanes(srcPanes);
+			dstHolder.State.AddPanes(srcPanes, insertIndex);
 
 			// Without this delay we're getting an ObjectDisposedException in a ILiteSubject
 			Obs.Timer(TimeSpan.Zero)
