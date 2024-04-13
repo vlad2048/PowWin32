@@ -1,6 +1,5 @@
 ﻿using FastForms.Docking.Logic.Layout_.Enums;
 using FastForms.Utils.GdiUtils;
-using PowWin32.Diag;
 using PowWin32.Geom;
 using PowWin32.Windows;
 using PowWin32.Windows.ReactiveLight;
@@ -11,7 +10,7 @@ using Vanara.PInvoke;
 
 namespace FastForms.Docking;
 
-public abstract class Pane
+public abstract class Pane(NodeType type, string name)
 {
 	private static readonly WinClass Class = new(
 		"Pane",
@@ -26,18 +25,12 @@ public abstract class Pane
 		0
 	);
 
-	public NodeType Type { get; }
 
-	// TODO: only create the SysWin on SetParent / Attach
+
+	public NodeType Type { get; } = type;
+	public string Name { get; } = name;
 	public SysWin Sys { get; } = new();
 
-	public string Name { get; }
-
-	protected Pane(NodeType type, string name)
-	{
-		Type = type;
-		Name = name;
-	}
 
 	internal void SetParent(SysWin holderWin, R r) => Sys.CreateMove(holderWin.Handle, r, Class, Styles);
 

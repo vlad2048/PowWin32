@@ -18,7 +18,6 @@ using FastForms.Docking.Utils;
 using FastForms.Docking.Logic.DockerWin_.Painting;
 using FastForms.Docking.Logic.DockerWin_.Structs;
 using FastForms.Docking.Logic.DropLogic_;
-using FastForms.Docking.Logic.HolderWin_.Painting;
 using FastForms.Docking.Utils.Btns_;
 using FastForms.Utils.GdiUtils;
 using FastForms.Docking.Structs;

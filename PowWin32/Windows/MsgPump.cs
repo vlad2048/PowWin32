@@ -30,12 +30,6 @@ public static class MsgPump
 			if (bRet == -1)
 				Win32Error.ThrowLastError();
 			User32.TranslateMessage(msg);
-
-			if (msg.message == (uint)WM.WM_CAPTURECHANGED)
-			{
-				Console.WriteLine($"Capture <- {msg.lParam:X}");
-			}
-
 			User32.DispatchMessage(msg);
 		}
 		return bRet;

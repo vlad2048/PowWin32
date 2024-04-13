@@ -17,6 +17,14 @@ namespace FastForms.Docking.Logic.DropLogic_;
 
 static class Dropper
 {
+	// TODO: Disable dock zones when Control is pressed
+	// unfortunately I'm not getting any key events when the user is moving the window
+	/*private static IObservable<bool> GetCtrlKey(this SysWin sys) =>
+		sys.Evt.WhenKey.ToObs()
+			.Where(e => e.VirtualKey == VirtualKey.CONTROL)
+			.Select(e => e.IsKeyDown)
+			.Prepend(User32.GetKeyState((int)VirtualKey.CONTROL).IsDown());*/
+
 	public static void Setup(
 		Docker dockerSrc
 	)
@@ -26,14 +34,16 @@ static class Dropper
 		var dropWin = new DropWin().D(d);
 		var drop = Var.Make(May.None<Drop>(), d);
 
-
 		// Track mouse position while the window is being moved
 		// ====================================================
-		var mouse =
+		var isMoving =
 			Obs.Merge(
-				sysSrc.Evt.WhenEnterSizeMove.Select(_ => true),
+				sysSrc.Evt.WhenSysCommand.ToObs().Where(e => e.Command is User32.SysCommand.SC_MOVE).Select(_ => true),
 				sysSrc.Evt.WhenExitSizeMove.Select(_ => false)
-			)
+			);
+
+		var mouse =
+			isMoving
 			.Select(isMoving_ => isMoving_ switch
 			{
 				false => Obs.Return(May.None<Pt>()),
@@ -144,7 +154,7 @@ static class Dropper
 			.Select(e => e.Ensure());
 
 
-
+	private static bool IsDown(this short v) => (((ushort)v) & 0x80) != 0;
 
 
 	//private static IRoVar<Maybe<T>> ToMayVar<T>(this IObservable<Maybe<T>> source, Disp d) => Var.Make(May.None<T>(), source, d);
