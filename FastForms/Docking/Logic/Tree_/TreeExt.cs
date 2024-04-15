@@ -1,6 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using FastForms.Docking.Logic.Layout_.Nodes;
-using PowTrees.Algorithms;
 
 namespace FastForms.Docking.Logic.Tree_;
 

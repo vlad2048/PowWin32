@@ -34,6 +34,8 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "FastForms.LINQPad", "FastForms.LINQPad\FastForms.LINQPad.csproj", "{F7EA1C85-319C-42EB-9542-09A22A0B102D}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DualExplorer", "Play\DualExplorer\DualExplorer.csproj", "{A55663F4-E266-49C7-BB46-1634C5D1EFC0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -80,6 +82,10 @@ Global
 		{F7EA1C85-319C-42EB-9542-09A22A0B102D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F7EA1C85-319C-42EB-9542-09A22A0B102D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F7EA1C85-319C-42EB-9542-09A22A0B102D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A55663F4-E266-49C7-BB46-1634C5D1EFC0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A55663F4-E266-49C7-BB46-1634C5D1EFC0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A55663F4-E266-49C7-BB46-1634C5D1EFC0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A55663F4-E266-49C7-BB46-1634C5D1EFC0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -92,6 +98,7 @@ Global
 		{7BA593D1-2F69-4FFE-860D-CC1E5CE51D71} = {D318D8E3-6AA2-4CB4-866A-19BD3CE68A27}
 		{973722F8-B02B-4910-A3D8-A5FFE2C99A50} = {D318D8E3-6AA2-4CB4-866A-19BD3CE68A27}
 		{290537FA-8661-43D0-BDAC-CF00F134E66B} = {D318D8E3-6AA2-4CB4-866A-19BD3CE68A27}
+		{A55663F4-E266-49C7-BB46-1634C5D1EFC0} = {A5F92B2C-D596-4A20-8F2C-DF4E208159EC}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {2D7A347D-C7E1-4573-968A-19CB77997DE5}

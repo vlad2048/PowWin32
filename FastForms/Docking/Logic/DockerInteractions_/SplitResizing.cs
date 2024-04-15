@@ -77,17 +77,10 @@ static class SplitResizing
 				var posNext = mouseLoc + st.Ofs;
 				var posNextClamped = posNext.Clamp(st.PosMin, st.PosMax);
 				st.Bar.Split.Pos = posNextClamped;
-				docker.TriggerTreeMod(new RecomputeLayoutTreeMod());
+				docker.TriggerTreeMod(new SplitResizeTreeMod());
 			}
 		);
 	}
-
-	/*private static Pt PtDir(Dir dir, int v) => dir switch
-	{
-		Dir.Horz => new Pt(v, 0),
-		Dir.Vert => new Pt(0, v),
-		_ => throw new ArgumentException()
-	};*/
 }
 
 

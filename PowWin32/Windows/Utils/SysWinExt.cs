@@ -38,9 +38,16 @@ public static class SysWinExt
 		User32.InvalidateRect(sys.Handle, rect, false).Check();
 	}
 
+	public static void Redraw(this SysWin sys, RedrawWindowFlags flags) => RedrawWindow(sys.Handle, 0, 0, flags);
+
 	[DllImport(Lib.User32, SetLastError = false, ExactSpelling = true)]
 	[return: MarshalAs(UnmanagedType.Bool)]
 	private static extern bool InvalidateRect(HWND hWnd, [In] nint lpRect, [MarshalAs(UnmanagedType.Bool)] bool bErase);
+
+	[DllImport(Lib.User32, SetLastError = false, ExactSpelling = true)]
+	[PInvokeData("winuser.h", MSDNShortId = "c6cb7f74-237e-4d3e-a852-894da36e990c")]
+	[return: MarshalAs(UnmanagedType.Bool)]
+	private static extern bool RedrawWindow(HWND hWnd, nint lprcUpdate, HRGN hrgnUpdate, User32.RedrawWindowFlags flags);
 
 
 	// **************

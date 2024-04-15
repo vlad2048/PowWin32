@@ -1,11 +1,11 @@
 ﻿using FastForms.Docking;
-using FastForms.Docking.Enums;
 using FastForms.Docking.Logic.HolderWin_.Structs;
-using FastForms.Docking.Logic.Tree_;
-using PowRxVar;
+using FastForms.Utils.GdiUtils;
 using PowWin32.Geom;
 using PowWin32.Windows;
+using PowWin32.Windows.ReactiveLight;
 using PowWin32.Windows.Structs;
+using PowWin32.Windows.StructsPackets;
 using PowWin32.Windows.Utils;
 using Vanara.PInvoke;
 	
@@ -17,8 +17,9 @@ public sealed class AppWin
 
 	private static readonly WinClass Class = new(
 		"AppWin",
-		styles: User32.WindowClassStyles.CS_HREDRAW | User32.WindowClassStyles.CS_VREDRAW,
-		hBrush: BkgBrush
+		styles: 0, //User32.WindowClassStyles.CS_HREDRAW | User32.WindowClassStyles.CS_VREDRAW,
+		hBrush: Gdi32.GetStockObject(Gdi32.StockObjectType.NULL_BRUSH)
+		//hBrush: BkgBrush
 	);
 	private static readonly WinStylesDef Styles = new(
 		User32.WindowStyles.WS_CLIPSIBLINGS | User32.WindowStyles.WS_CLIPCHILDREN |
@@ -26,6 +27,7 @@ public sealed class AppWin
 		User32.WindowStylesEx.WS_EX_WINDOWEDGE
 	);
 
+	private static readonly Brush BackBrush = MkBrush(0x808080);
 
 
 	public SysWin Sys { get; } = new();
@@ -37,6 +39,13 @@ public sealed class AppWin
 		var dockerRoot = N.RootTool(withDocRoot ? N.RootDoc() : null);
 		Docker = Docker.MakeForMainWindow(dockerRoot, Sys);
 		_ = HolderBtnBmps.Bmps;
+
+		Sys.Evt.WhenPaint.Subs((ref PaintPacket e) =>
+		{
+			using var _ = e.Paint(out var gfx);
+			gfx.FillRect(Sys.ClientR, BackBrush);
+		});
+
 		Sys.Show();
 	}
 }

@@ -185,8 +185,8 @@ public sealed class HolderState
 				JerkLay.V
 			);
 
-			//var paneR = Layout.GetPaneR(Sys.ClientR, Panes.Count, JerkLay.V);
-			//gfx.FillRect(paneR, BackBrush);
+			var paneR = Layout.GetPaneR(Sys.ClientR, Panes.Count, JerkLay.V);
+			gfx.FillRect(paneR, BackBrush);
 		});
 
 

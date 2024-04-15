@@ -1,8 +1,6 @@
 ﻿using FastForms.Docking.Enums;
 using FastForms.Docking.Logic.Layout_;
 using FastForms.Docking.Logic.Layout_.Nodes;
-using FastForms.Docking.Logic.Tree_;
-using PowBasics.CollectionsExt;
 using PowRxVar;
 using PowWin32.Geom;
 using PowWin32.Windows;
@@ -20,7 +18,6 @@ using FastForms.Docking.Logic.DockerWin_.Structs;
 using FastForms.Docking.Utils.Btns_;
 using FastForms.Utils.GdiUtils;
 using FastForms.Docking.Structs;
-using PowTrees.Algorithms;
 using FastForms.Docking.Logic.DockerInteractions_;
 using FastForms.Utils.WinEventUtils;
 using PowWin32.Windows.StructsPInvoke;
@@ -100,70 +97,24 @@ public sealed class Docker
 
 		// Rect to tree changes: Attach windows to parent & Layout
 		// =====================
-		WhenTreeMod.Subscribe(mod =>
-		{
-			switch (mod)
-			{
-				case InitTreeMod:
-					Root.V.R = Sys.ClientR;
-					LayoutCalculator.Compute(Root, TreeType.V);
-					Root.OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Attach(this));
-					LayoutApplier.Apply(Root);
-					break;
-
-				case PaintNodeTreeMod { Node: var node }:
-					Root.Find(node).OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Repaint());
-					break;
-
-				case AddHoldersTreeMod { Holders: var holders }:
-					Root.V.R = Sys.ClientR;
-					LayoutCalculator.Compute(Root, TreeType.V);
-					holders.ForEach(holder => holder.State.Attach(this));
-					LayoutApplier.Apply(Root);
-					break;
-
-				case RecomputeLayoutTreeMod:
-					LayoutCalculator.Compute(Root, TreeType.V);
-					LayoutApplier.Apply(Root);
-					break;
-
-				default:
-					throw new ArgumentException();
-			}
-
-		}).D(D);
-
-		Sys.Evt.WhenSize.ToUnit().Subscribe(_ =>
-		{
-			Root.V.R = Sys.ClientR;
-			LayoutCalculator.Compute(Root, TreeType.V);
-			LayoutApplier.Apply(Root);
-		}).D(D);
-
-		TreeType.Subscribe(_ =>
-		{
-			if (dbg) L("TreeType -> Invalidate");
-			Sys.Invalidate();
-		}).D(D);
+		WhenTreeMod.Subscribe(mod => mod.Apply(this)).D(D);
 
 
-		// Handle Docking
-		// ==============
-		DockerDocking.Setup(this);
-
-
-		// Initial Layout
-		// ==============
+		// Initial Layout, Resize & ActiveHolder
+		// =====================================
 		TriggerTreeMod(new InitTreeMod());
+		Sys.Evt.WhenSize.ToUnit().Subscribe(_ => TriggerTreeMod(new RecomputeLayoutTreeMod())).D(D);
+		ActiveHolder.Subscribe(_ => TriggerTreeMod(new PaintNodeTreeMod(Root.V))).D(D);
+
 
 		// Handle Split Resizing
 		// =====================
 		SplitResizing.Setup(this);
 
-		ActiveHolder.Subscribe(_ =>
-		{
-			TriggerTreeMod(new PaintNodeTreeMod(Root.V));
-		}).D(D);
+
+		// Handle Docking
+		// ==============
+		DockerDocking.Setup(this);
 
 
 		// Show Window

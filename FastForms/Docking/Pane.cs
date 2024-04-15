@@ -33,7 +33,10 @@ public abstract class Pane(NodeType type, string name)
 
 	public override string ToString() => Name;
 
-	internal void SetParent(SysWin holderWin, R r) => Sys.CreateMove(holderWin.Handle, r, Class, Styles);
+	internal void SetParent(SysWin holderWin, R r)
+	{
+		Sys.CreateMove(holderWin.Handle, r, Class, Styles);
+	}
 
 	internal void SetR(R r)
 	{
@@ -46,7 +49,10 @@ public abstract class Pane(NodeType type, string name)
 		User32.ShowWindow(Sys.Handle, visible ? ShowWindowCommand.SW_SHOW : ShowWindowCommand.SW_HIDE);
 	}
 
-	internal void Repaint() => Sys.Invalidate();
+	internal void Repaint()
+	{
+		Sys.Invalidate();
+	}
 }
 
 public class ToolPane(string name) : Pane(NodeType.Tool, name);

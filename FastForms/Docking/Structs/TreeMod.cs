@@ -1,5 +1,8 @@
-﻿using FastForms.Docking.Logic.Layout_.Nodes;
-using PowWin32.Geom;
+﻿using FastForms.Docking.Logic.Layout_;
+using FastForms.Docking.Logic.Layout_.Nodes;
+using FastForms.Docking.Logic.Tree_;
+using PowBasics.CollectionsExt;
+using PowTrees.Algorithms;
 
 namespace FastForms.Docking.Structs;
 
@@ -13,21 +16,50 @@ sealed record AddHoldersTreeMod(HolderNode[] Holders) : ITreeMod;
 
 sealed record RecomputeLayoutTreeMod : ITreeMod;
 
+sealed record SplitResizeTreeMod : ITreeMod;
 
-/*enum TreeModType
+
+
+static class TreeModApplier
 {
-    Layout,
-    PaintOnly
+	public static void Apply(this ITreeMod mod, Docker docker)
+	{
+		var (root, sys, treeType) = (docker.Root, docker.Sys, docker.TreeType.V);
+
+		switch (mod)
+		{
+			case InitTreeMod:
+				root.V.R = sys.ClientR;
+				LayoutCalculator.Compute(root, treeType);
+				root.OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Attach(docker));
+				LayoutApplier.Apply(root);
+				break;
+
+			case PaintNodeTreeMod { Node: var node }:
+				root.Find(node).OfTypeNod<INode, HolderNode>().ForEach(holder => holder.State.Repaint());
+				break;
+
+			case AddHoldersTreeMod { Holders: var holders }:
+				root.V.R = sys.ClientR;
+				LayoutCalculator.Compute(root, treeType);
+				holders.ForEach(holder => holder.State.Attach(docker));
+				LayoutApplier.Apply(root);
+				break;
+
+			case RecomputeLayoutTreeMod:
+				root.V.R = sys.ClientR;
+				LayoutCalculator.Compute(root, treeType);
+				LayoutApplier.Apply(root);
+				break;
+
+			case SplitResizeTreeMod:
+				root.V.R = sys.ClientR;
+				LayoutCalculator.Compute(root, treeType);
+				LayoutApplier.ApplyRedraw(root, sys);
+				break;
+
+			default:
+				throw new ArgumentException();
+		}
+	}
 }
-
-sealed record TreeMod(
-	TreeModType Type,
-	TNod<INode> Nod,
-	R? NodR,
-	HolderNode[] HolderAdds
-)
-{
-	public static TreeMod MakeInit(TNod<INode> root, R clientR) => new(TreeModType.Layout, root, clientR, [.. root.Select(e => e.V).OfType<HolderNode>()]);
-
-	public static TreeMod Make(TNod<INode> nod) => new(TreeModType.Layout, nod, null, []);
-}*/
